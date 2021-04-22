@@ -280,7 +280,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
         Return: 
             prediction: list with all predictions
     """
-
+    
     predictions = []
     # set dropout layers to train mode
     set_dropout_mode(classifier.estimator.module_, dropout_layer_indexes, train_mode=True)
@@ -302,6 +302,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
         split_args = torch.split(X, sample_per_forward_pass)
     else:
         raise RuntimeError("Error in model data type, only dict or tensors supported")
+    
+    logger.info("GPU _allocation: {}".format(torch.cuda.memory_allocated()))
 
     for i in range(num_predictions):
 
