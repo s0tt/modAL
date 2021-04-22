@@ -3,7 +3,10 @@ import sys
 import torch 
 from collections.abc import Mapping
 from typing import Callable
+import time
 
+import logging
+logger = logging.getLogger(__name__)
 
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing import normalize
@@ -305,17 +308,23 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
         probas = None
 
         for samples in split_args:
+            time_before_prediction_starts = time.time() 
             #call Skorch infer function to perform model forward pass
             #In comparison to: predict(), predict_proba() the infer() 
             # does not change train/eval mode of other layers 
+            time_before_infer = time.time()
             logits = classifier.estimator.infer(samples)
+            logger.info("Time for single infer, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
+            time_logits_adaptor_before = time.time() 
             prediction = logits_adaptor(logits, samples)
+            logger.info("Time for logits_adaptor, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_logits_adaptor_before))
+
             mask = ~prediction.isnan()
             prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
             prediction = to_numpy(prediction)
             probas = prediction if probas is None else np.vstack((probas, prediction))
-
+            logger.info("Time for full_prediction_cycle, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_prediction_starts))
 
         predictions.append(probas)
 
