@@ -319,22 +319,22 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             #call Skorch infer function to perform model forward pass
             #In comparison to: predict(), predict_proba() the infer() 
             # does not change train/eval mode of other layers 
+            with torch.no_grad(): 
+                time_before_infer = time.time()
+                logits = classifier.estimator.infer(samples)
+                logger.info("Time for single infer, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
-            time_before_infer = time.time()
-            logits = classifier.estimator.infer(samples)
-            logger.info("Time for single infer, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
+                time_logits_adaptor_before = time.time() 
+                prediction = logits_adaptor(logits, samples)
+                logger.info("Time for logits_adaptor, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_logits_adaptor_before))
 
-            time_logits_adaptor_before = time.time() 
-            prediction = logits_adaptor(logits, samples)
-            logger.info("Time for logits_adaptor, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_logits_adaptor_before))
-
-            mask = ~prediction.isnan()
-            prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
-            #if probas is None: probas = np.empty((number_of_samples, prediction.shape[-1]), dtype=np.float64)
-            if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device='cpu')
-            probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction.cpu()
-            #probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = to_numpy(prediction)
-            logger.info("Time for full_prediction_cycle, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
+                mask = ~prediction.isnan()
+                prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
+                #if probas is None: probas = np.empty((number_of_samples, prediction.shape[-1]), dtype=np.float64)
+                if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device='cpu')
+                probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction.cpu()
+                #probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = to_numpy(prediction)
+                logger.info("Time for full_prediction_cycle, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
 
         probas = to_numpy(probas)
