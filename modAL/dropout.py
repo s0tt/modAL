@@ -313,7 +313,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
     for i in range(num_predictions):
 
-        probas = None
+        probas = []
 
         for index, samples in enumerate(split_args):
             #call Skorch infer function to perform model forward pass
@@ -331,11 +331,15 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 mask = ~prediction.isnan()
                 prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
                 #if probas is None: probas = np.empty((number_of_samples, prediction.shape[-1]), dtype=np.float64)
-                if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device='cpu')
-                probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction.cpu()
+                #if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device='cpu')
+                #probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction.cpu()
                 #probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = to_numpy(prediction)
+                probas.append(prediction)
                 logger.info("Time for full_prediction_cycle, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
+        time_before_cat = time.time()
+        probas = torch.cat(probas)
+        logger.info("Time concatination: {}".format(time.time() - time_before_cat))
 
         probas = to_numpy(probas)
         predictions.append(probas)
