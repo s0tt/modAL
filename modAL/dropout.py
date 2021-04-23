@@ -328,15 +328,13 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             prediction = logits_adaptor(logits, samples)
             logger.info("Time for logits_adaptor, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_logits_adaptor_before))
 
-            print((number_of_samples, prediction.shape[-1]))
-            if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device=prediction.device)
-            probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction
+            mask = ~prediction.isnan()
+            prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
+            if probas is None: probas = torch.empty((number_of_samples, prediction.shape[-1]), device='cpu')
+            probas[range(sample_per_forward_pass*index, sample_per_forward_pass*(index+1)), :] = prediction.cpu()
             logger.info("Time for full_prediction_cycle, with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
 
-
-        mask = ~probas.isnan()
-        probas[mask] = probas[mask].unsqueeze(0).softmax(1)
         probas = to_numpy(probas)
         predictions.append(probas)
 
