@@ -113,10 +113,10 @@ def mc_dropout_bald(classifier: BaseEstimator, X: modALinput, n_instances: int =
             The indices of the instances from X chosen to be labelled;
             The mc-dropout metric of the chosen instances; 
     """
-    predictions = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
+    predictions_1, predictions_2 = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
     #calculate BALD (Bayesian active learning divergence))
-
-    bald_scores = _bald_divergence(predictions)
+    
+    bald_scores = (_bald_divergence(predictions_1) + _bald_divergence(predictions_2))/2
 
     if not random_tie_break:
         return multi_argmax(bald_scores, n_instances=n_instances)
@@ -160,9 +160,9 @@ def mc_dropout_mean_st(classifier: BaseEstimator, X: modALinput, n_instances: in
     """
 
     # set dropout layers to train mode
-    predictions = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
+    predictions_1, predictions_2 = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
 
-    mean_standard_deviations = _mean_standard_deviation(predictions)
+    mean_standard_deviations = (_mean_standard_deviation(predictions_1) + _mean_standard_deviation(predictions_2))/2
 
     if not random_tie_break:
         return multi_argmax(mean_standard_deviations, n_instances=n_instances)
@@ -204,10 +204,10 @@ def mc_dropout_max_entropy(classifier: BaseEstimator, X: modALinput, n_instances
             The indices of the instances from X chosen to be labelled;
             The mc-dropout metric of the chosen instances; 
     """
-    predictions = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
+    predictions_1, predictions_2 = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
 
     #get entropy values for predictions
-    entropy = _entropy(predictions)
+    entropy = (_entropy(predictions_1) + _entropy(predictions_2))/2
 
     if not random_tie_break:
         return multi_argmax(entropy, n_instances=n_instances)
@@ -249,10 +249,10 @@ def mc_dropout_max_variationRatios(classifier: BaseEstimator, X: modALinput, n_i
             The indices of the instances from X chosen to be labelled;
             The mc-dropout metric of the chosen instances; 
     """
-    predictions = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
+    predictions_1, predictions_2 = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
 
     #get variation ratios values for predictions
-    variationRatios = _variation_ratios(predictions)
+    variationRatios = (_variation_ratios(predictions_1) + _variation_ratios(predictions_2))/2 
 
     if not random_tie_break:
         return multi_argmax(variationRatios, n_instances=n_instances)
@@ -281,7 +281,9 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             prediction: list with all predictions
     """
     
-    predictions = []
+    predictions_1 = []
+    predictions_2 = []
+
     # set dropout layers to train mode
     set_dropout_mode(classifier.estimator.module_, dropout_layer_indexes, train_mode=True)
 
@@ -313,7 +315,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
     for i in range(num_predictions):
 
-        probas = []
+        probas_1 = []
+        probas_2 = []
 
         for index, samples in enumerate(split_args):
             #call Skorch infer function to perform model forward pass
@@ -321,18 +324,25 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             # does not change train/eval mode of other layers 
             with torch.no_grad(): 
                 logits = classifier.estimator.infer(samples)
-                prediction = logits_adaptor(logits, samples)
-                mask = ~prediction.isnan()
-                prediction[mask] = prediction[mask].unsqueeze(0).softmax(1)
-                probas.append(prediction)
+
+                start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
+                start_logits = start_logits.unsqueeze(0).softmax(1)
+                probas_1.append(start_logits)
+
+                end_logits = end_logits.unsqueeze(0).softmax(1)
+                probas_2.append(end_logits)
         
-        probas = torch.cat(probas)
-        predictions.append(to_numpy(probas))
+        probas_1 = torch.cat(probas_1)
+        probas_2 = torch.cat(probas_2)
+
+        predictions_1.append(to_numpy(probas_1))
+        predictions_2.append(to_numpy(probas_2))
+
 
     # set dropout layers to eval
     set_dropout_mode(classifier.estimator.module_, dropout_layer_indexes, train_mode=False)
 
-    return predictions
+    return predictions_1, predictions_2
 
 def entropy_sum(values: np.array, axis: int =-1):
     #sum Scipy basic entropy function: entr()
