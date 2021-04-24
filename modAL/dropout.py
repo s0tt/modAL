@@ -327,9 +327,11 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
                 start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
                 start_logits = start_logits.unsqueeze(0).softmax(1)
+                print(start_logits.shape)
                 probas_1.append(start_logits)
 
                 end_logits = end_logits.unsqueeze(0).softmax(1)
+                print(end_logits.shape)
                 probas_2.append(end_logits)
         
         probas_1 = torch.cat(probas_1)
