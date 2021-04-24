@@ -326,12 +326,10 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 logits = classifier.estimator.infer(samples)
 
                 start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
-                start_logits = start_logits.softmax(1)
-                print(start_logits.shape)
+                start_logits = start_logits.squeeze(1).softmax(1)
                 probas_1.append(start_logits)
 
-                end_logits = end_logits.softmax(1)
-                print(end_logits.shape)
+                end_logits = end_logits.squeeze(1).softmax(1)
                 probas_2.append(end_logits)
         
         probas_1 = torch.cat(probas_1)
