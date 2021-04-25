@@ -344,8 +344,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 end_logits = end_logits.squeeze(1).softmax(1)
                 probas_2.append(end_logits)
                 """
-                probas_1.append(logits)
-                probas_2.append(logits)
+                probas_1.append(to_numpy(logits))
+                probas_2.append(to_numpy(logits))
 
                 logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
