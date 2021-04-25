@@ -342,7 +342,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             end_logits = end_logits.squeeze(1).softmax(1)
             probas_2.append(end_logits)
             logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
-
+            
         
         probas_1 = torch.cat(probas_1)
         probas_2 = torch.cat(probas_2)
