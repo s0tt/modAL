@@ -113,10 +113,16 @@ def mc_dropout_bald(classifier: BaseEstimator, X: modALinput, n_instances: int =
             The indices of the instances from X chosen to be labelled;
             The mc-dropout metric of the chosen instances; 
     """
+    time_before_prediction = time.time()
     predictions_1, predictions_2 = get_predictions(classifier, X, dropout_layer_indexes, num_cycles, sample_per_forward_pass, logits_adaptor)
+    logger.info("Time for full prediction: {}".format(time.time()- time_before_prediction))
+
     #calculate BALD (Bayesian active learning divergence))
     
+    time_before_bald_calculation = time.time()
     bald_scores = (_bald_divergence(predictions_1) + _bald_divergence(predictions_2))/2
+    logger.info("Time for bald calculation: {}".format(time.time()- time_before_bald_calculation))
+
 
     if not random_tie_break:
         return multi_argmax(bald_scores, n_instances=n_instances)
@@ -291,6 +297,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
     number_of_samples = 0
 
+
+    time_before_data_splitting = time.time()
     if isinstance(X, Mapping): #check for dict
         for k, v in X.items():
             number_of_samples = v.size(0)
@@ -310,7 +318,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
     else:
         raise RuntimeError("Error in model data type, only dict or tensors supported")
     
-    logger.info("GPU _allocation: {}".format(torch.cuda.memory_allocated()))
+    logger.info("Time for data splitting with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_data_splitting))
 
 
     for i in range(num_predictions):
@@ -323,7 +331,10 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             #In comparison to: predict(), predict_proba() the infer() 
             # does not change train/eval mode of other layers 
             with torch.no_grad(): 
+                time_before_infer = time.time()
                 logits = classifier.estimator.infer(samples)
+                logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
+
 
                 start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
                 start_logits = start_logits.squeeze(1).softmax(1)
@@ -331,6 +342,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
                 end_logits = end_logits.squeeze(1).softmax(1)
                 probas_2.append(end_logits)
+                logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
+
         
         probas_1 = torch.cat(probas_1)
         probas_2 = torch.cat(probas_2)
