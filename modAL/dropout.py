@@ -321,16 +321,17 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
     logger.info("Time for data splitting with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_data_splitting))
 
 
-    for i in range(num_predictions):
+    with torch.no_grad(): 
 
-        probas_1 = []
-        probas_2 = []
+        for i in range(num_predictions):
 
-        for index, samples in enumerate(split_args):
-            #call Skorch infer function to perform model forward pass
-            #In comparison to: predict(), predict_proba() the infer() 
-            # does not change train/eval mode of other layers 
-            with torch.no_grad(): 
+            probas_1 = []
+            probas_2 = []
+
+            for index, samples in enumerate(split_args):
+                #call Skorch infer function to perform model forward pass
+                #In comparison to: predict(), predict_proba() the infer() 
+                # does not change train/eval mode of other layers 
                 time_before_infer = time.time()
                 logits = classifier.estimator.infer(samples)
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
@@ -344,12 +345,12 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 probas_2.append(end_logits)
                 logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
 
-        
-        probas_1 = torch.cat(probas_1)
-        probas_2 = torch.cat(probas_2)
+            
+            probas_1 = torch.cat(probas_1)
+            probas_2 = torch.cat(probas_2)
 
-        predictions_1.append(to_numpy(probas_1))
-        predictions_2.append(to_numpy(probas_2))
+            predictions_1.append(to_numpy(probas_1))
+            predictions_2.append(to_numpy(probas_2))
 
 
     # set dropout layers to eval
