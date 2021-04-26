@@ -354,9 +354,11 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 logits = classifier.estimator.infer(samples)
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 logger.info("logit_shape: {}".format(logits.shape))
-                time_before_cpu_conversion = time.time()
-                probas_1.append(logits.clone())
-                logger.info("Time for cpu conversion: {}".format(time.time()-time_before_cpu_conversion))
+                probas_1.append(logits[0][0][0])
+                del logits
+                #time_before_cpu_conversion = time.time()
+                #probas_1.append(logits.clone())
+                #logger.info("Time for cpu conversion: {}".format(time.time()-time_before_cpu_conversion))
 
                 """
                 time_before_numpy_conversion = time.time()
