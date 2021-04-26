@@ -354,7 +354,11 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 logits = classifier.estimator.infer(samples)
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 logger.info("logit_shape: {}".format(logits.shape))
+
+                time_before_numpy_conversion = time.time()
                 prediction = to_numpy(logits)
+                logger.info("Time for numpy conversion: {}".format(time.time()-time_before_numpy_conversion))
+
                 time_numpy_vstack = time.time()
                 probas_1 = prediction if probas_1 is None else np.vstack((probas_1, prediction))
                 logger.info("Time numpy_vstack {} samples: {}".format(sample_per_forward_pass, time.time()- time_numpy_vstack))
