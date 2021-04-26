@@ -331,18 +331,14 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
             #call Skorch infer function to perform model forward pass
             #In comparison to: predict(), predict_proba() the infer() 
             # does not change train/eval mode of other layers 
-            time_before_infer = time.time()
             logits = classifier.estimator.infer(samples)
-            logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 
             start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
             start_logits = start_logits.squeeze(1).softmax(1)
             probas_1.append(start_logits)
 
             end_logits = end_logits.squeeze(1).softmax(1)
-            probas_2.append(end_logits)
-            logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
-            
+            probas_2.append(end_logits)            
         
         probas_1 = torch.cat(probas_1)
         probas_2 = torch.cat(probas_2)
