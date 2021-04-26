@@ -321,63 +321,69 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
     logger.info("Time for data splitting with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_data_splitting))
 
 
-    #with torch.no_grad(): 
+    with torch.no_grad(): 
 
-    for i in range(num_predictions):
+        for i in range(num_predictions):
 
-        probas_1 = None
-        probas_2 = []
+            probas_1 = []
+            probas_2 = []
 
-        """
-        for index, samples in enumerate(split_args):
-            #call Skorch infer function to perform model forward pass
-            #In comparison to: predict(), predict_proba() the infer() 
-            # does not change train/eval mode of other layers 
+            """
+            for index, samples in enumerate(split_args):
+                #call Skorch infer function to perform model forward pass
+                #In comparison to: predict(), predict_proba() the infer() 
+                # does not change train/eval mode of other layers 
+               
+                logits = classifier.estimator.infer(samples)
+                logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
+                
+                start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
+                start_logits = start_logits.squeeze(1).softmax(1)
+                probas_1.append(start_logits)
+
+                end_logits = end_logits.squeeze(1).softmax(1)
+                probas_2.append(end_logits)
+                logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
+            """
+
+            for samples in split_args:
+                #call Skorch infer function to perform model forward pass
+                #In comparison to: predict(), predict_proba() the infer() 
+                # does not change train/eval mode of other layers 
+                time_before_infer = time.time()
+                logits = classifier.estimator.infer(samples)
+                logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
+                logger.info("logit_shape: {}".format(logits.shape))
+                time_before_cpu_conversion = time.time()
+                probas_1.append(logits.cpu())
+                logger.info("Time for cpu conversion: {}".format(time.time()-time_before_cpu_conversion))
+
+                """
+                time_before_numpy_conversion = time.time()
+                prediction = to_numpy(logits)
+                logger.info("Time for numpy conversion: {}".format(time.time()-time_before_numpy_conversion))
+
+                time_numpy_vstack = time.time()
+                probas_1 = prediction if probas_1 is None else np.vstack((probas_1, prediction))
+                logger.info("Time numpy_vstack {} samples: {}".format(sample_per_forward_pass, time.time()- time_numpy_vstack))
+                logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
+                """
+
+
+            #predictions_1.append(probas_1)
+
             
-            logits = classifier.estimator.infer(samples)
-            logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
+            probas_1 = torch.cat(probas_1)
+            probas_2 = torch.cat(probas_2)
+
+            predictions_1.append(to_numpy(probas_1))
+            predictions_2.append(to_numpy(probas_2))
             
-            start_logits, end_logits = logits.transpose(1, 2).split(1, dim=1)
-            start_logits = start_logits.squeeze(1).softmax(1)
-            probas_1.append(start_logits)
-
-            end_logits = end_logits.squeeze(1).softmax(1)
-            probas_2.append(end_logits)
-            logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
-        """
-
-        for samples in split_args:
-            #call Skorch infer function to perform model forward pass
-            #In comparison to: predict(), predict_proba() the infer() 
-            # does not change train/eval mode of other layers 
-            time_before_infer = time.time()
-            logits = classifier.estimator.infer(samples)
-            logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
-            logger.info("logit_shape: {}".format(logits.shape))
-
-            time_before_numpy_conversion = time.time()
-            prediction = to_numpy(logits)
-            logger.info("Time for numpy conversion: {}".format(time.time()-time_before_numpy_conversion))
-
-            time_numpy_vstack = time.time()
-            probas_1 = prediction if probas_1 is None else np.vstack((probas_1, prediction))
-            logger.info("Time numpy_vstack {} samples: {}".format(sample_per_forward_pass, time.time()- time_numpy_vstack))
-            logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
-        
-        predictions_1.append(probas_1)
-
-        """
-        probas_1 = torch.cat(probas_1)
-        probas_2 = torch.cat(probas_2)
-
-        predictions_1.append(to_numpy(probas_1))
-        predictions_2.append(to_numpy(probas_2))
-        """
 
     # set dropout layers to eval
     set_dropout_mode(classifier.estimator.module_, dropout_layer_indexes, train_mode=False)
 
-    return predictions_1, predictions_1 #predictions_1, predictions_2
+    return predictions_1, predictions_2
 
 def entropy_sum(values: np.array, axis: int =-1):
     #sum Scipy basic entropy function: entr()
