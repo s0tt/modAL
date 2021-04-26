@@ -363,7 +363,8 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 probas_1 = prediction if probas_1 is None else np.vstack((probas_1, prediction))
                 logger.info("Time numpy_vstack {} samples: {}".format(sample_per_forward_pass, time.time()- time_numpy_vstack))
                 logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
-                predictions_1.append(probas_1)
+            
+            predictions_1.append(probas_1)
 
             """
             probas_1 = torch.cat(probas_1)
