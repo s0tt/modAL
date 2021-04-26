@@ -325,7 +325,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
         for i in range(num_predictions):
 
-            probas_1 = []
+            probas_1 = None
             probas_2 = []
 
             """
