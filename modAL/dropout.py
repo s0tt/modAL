@@ -351,7 +351,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 #In comparison to: predict(), predict_proba() the infer() 
                 # does not change train/eval mode of other layers 
                 time_before_infer = time.time()
-                logits = classifier.estimator.infer(samples)
+                logits = classifier.estimator.module_(samples)
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 logger.info("logit_shape: {}".format(logits.shape))
                 #probas_1.append(logits[0][0][0])
