@@ -350,11 +350,10 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 #call Skorch infer function to perform model forward pass
                 #In comparison to: predict(), predict_proba() the infer() 
                 # does not change train/eval mode of other layers 
-
+                time_before_infer = time.time()
                 input = samples['input'].cuda()
                 segments = samples['segments'].cuda()
                 mask = samples['mask'].cuda()
-                time_before_infer = time.time()
                 logits = classifier.estimator.module_(input, segments, mask)
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 logger.info("logit_shape: {}".format(logits.shape))
