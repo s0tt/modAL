@@ -355,7 +355,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
                 logger.info("Time for a single infer: {}".format(time.time()- time_before_infer))
                 logger.info("logit_shape: {}".format(logits.shape))
                 time_before_cpu_conversion = time.time()
-                probas_1.append(logits)
+                probas_1.append(logits.clone())
                 logger.info("Time for cpu conversion: {}".format(time.time()-time_before_cpu_conversion))
 
                 """
