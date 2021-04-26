@@ -357,7 +357,7 @@ def get_predictions(classifier: BaseEstimator, X: modALinput, dropout_layer_inde
 
                 prediction = logits_adaptor(logits, samples)
                 mask = ~prediction.isnan()
-                prediction[mask] = prediction[mask].softmax(1)
+                prediction[mask] = prediction[mask]
                 prediction = to_numpy(prediction)
                 probas_1 = prediction if probas_1 is None else np.vstack((probas_1, prediction))
                 logger.info("Time for a prediciton cycles with {} samples: {}".format(sample_per_forward_pass, time.time()- time_before_infer))
